@@ -1,0 +1,182 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>木铎五十卷：因果长镜 | Project Chronicles</title>
+    <style>
+        :root { --bnu-red: #8b0000; --gold: #c5a059; --dorm-warm: #fdf5e6; --ink: #0d0d0d; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; color: #dcdcdc; font-family: "STSong", "SimSun", serif; overflow: hidden; }
+        #app { display: flex; width: 100vw; height: 100vh; position: relative; }
+
+
+        /* 50卷侧边编年史 */
+        #volume-scroll { width: 140px; background: #111; border-right: 1px solid #222; overflow-y: scroll; scrollbar-width: none; z-index: 100; }
+        .vol-node { padding: 18px 10px; font-size: 11px; color: #333; border-bottom: 1px solid #1a1a1a; text-align: center; cursor: pointer; }
+        .vol-node.active { color: var(--gold); background: rgba(197, 160, 89, 0.1); border-left: 4px solid var(--gold); }
+
+
+        /* 右侧头像 */
+        #actor-bar { position: absolute; top: 80px; right: 30px; display: flex; flex-direction: column; gap: 20px; z-index: 150; }
+        .actor-circle { width: 55px; height: 55px; border-radius: 50%; border: 2px solid #333; background-size: cover; filter: grayscale(1); transition: 0.5s; cursor: pointer; }
+        .actor-circle:hover { filter: grayscale(0); border-color: var(--gold); }
+
+
+        /* HUD */
+        #hud { position: absolute; top: 0; width: 100%; height: 60px; background: linear-gradient(to bottom, #000, transparent); z-index: 100; display: flex; align-items: center; padding: 0 40px; justify-content: space-between; font-size: 13px; letter-spacing: 1px; }
+        .timeline-box { background: var(--bnu-red); padding: 3px 15px; border-radius: 4px; color: #fff; font-weight: bold; }
+
+
+        /* 对话框 */
+        #dialogue-box { position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%); width: 92%; height: 340px; background: rgba(10, 10, 10, 0.98); border: 1px solid var(--gold); padding: 50px 80px; z-index: 100; cursor: pointer; box-sizing: border-box; }
+        #speaker { font-size: 26px; color: var(--gold); font-weight: bold; margin-bottom: 20px; border-left: 8px solid var(--bnu-red); padding-left: 20px; }
+        #content { font-size: 19px; line-height: 2.5; text-align: justify; height: 180px; overflow-y: auto; color: #ececec; }
+
+
+        /* 背景 */
+        #bg-layer { position: absolute; inset: 0; background-size: cover; background-position: center; transition: filter 2s; z-index: 1; filter: brightness(0.2); }
+        .warm-dorm { filter: brightness(0.4) sepia(0.2) !important; } /* 宿舍温暖滤镜 */
+
+
+        /* 选项层 */
+        #choice-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); z-index: 500; display: none; flex-direction: column; justify-content: center; align-items: center; gap: 15px; }
+        .choice-btn { width: 720px; padding: 20px 45px; background: rgba(255,255,255,0.02); border: 1px solid #444; color: #999; cursor: pointer; font-size: 17px; text-align: left; }
+        .choice-btn:hover { border-color: var(--gold); color: var(--gold); }
+    </style>
+</head>
+<body>
+
+
+<div id="app">
+    <div id="volume-scroll"></div>
+    <div id="actor-bar">
+        <div class="actor-circle" title="江屈骞" onclick="showBio('jiang')" style="background-image: url('https://via.placeholder.com/100/800000/fff?text=江')"></div>
+        <div class="actor-circle" title="林宇轩" onclick="showBio('lin')" style="background-image: url('https://via.placeholder.com/100/333/fff?text=林')"></div>
+        <div class="actor-circle" title="黄熙雅" onclick="showBio('huang')" style="background-image: url('https://via.placeholder.com/100/DAA520/000?text=黄')"></div>
+        <div class="actor-circle" title="田丽媛" onclick="showBio('tian')" style="background-image: url('https://via.placeholder.com/100/1E90FF/fff?text=田')"></div>
+    </div>
+    <div id="stage-view">
+        <div id="hud">
+            <div><span class="timeline-box" id="hud-time">2026</span> <span id="hud-loc">悉尼</span></div>
+            <div>观测因果: <span id="hud-vol" style="color:var(--gold)">1</span> / 50 卷</div>
+        </div>
+        <div id="bg-layer"></div>
+        <div id="choice-overlay"></div>
+        <div id="dialogue-box" onclick="engine.next()">
+            <div id="speaker">系统</div>
+            <div id="content"></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const engine = {
+        cur: 0,
+        isType: false,
+        db: [
+            { v: 1, y: "2026", l: "悉尼 · 寓所", s: "主控", t: "正月初三，悉尼。我坐在工位前，指尖划过微凉的桌面。校友群的一张照片让我恍如隔世。那是教九楼斑驳的红砖，但我脑海里跳出的却是 504 宿舍那张虽然挤、却永远有着热腾腾酱香饼味道的铁架床。那些年，我淡淡地看着这群人纠葛，可只有那间宿舍，是我在那场不幸福的蝉鸣里唯一的避风港。", bg: "https://images.unsplash.com/photo-1524312521193-2713e54b66b4?auto=format&fit=crop&w=1350&q=80" },
+            { v: 2, y: "2017", l: "女宿 504", s: "旁白", t: "【卷二：暖色的七人间】。2017年。宿舍里，黄熙雅正把自己埋在被子里小声哼着歌，虽然江屈骞还没回她信息，但她买了两份酱香饼。你坐在铺位上，看着这个不到20平的小空间，心里有一种淡淡的、被包裹的留恋。外界再乱，只要关上门，这里就是你们的。", bg: "https://images.unsplash.com/photo-1555854811-822477d105c9?auto=format&fit=crop&w=1350&q=80", type: "dorm" },
+            { v: 5, y: "2018", l: "教九楼 · 课堂", s: "旁白", t: "【卷五：训诂与叹息】。这一堂是《古代汉语》。许威汉老师在讲台上拆解着‘爱’字的古义。江屈骞坐在第一排，笔记做得极其漂亮。你坐在后排，看着他和田丽媛不经意间的眼神交汇。那种计算过的浪漫，在这个古老的词汇面前显得有些荒诞。", bg: "https://images.unsplash.com/photo-1509062560370-fd119a27e742?auto=format&fit=crop&w=1350&q=80" },
+            { v: 8, y: "2018", l: "女宿 504", s: "黄熙雅", t: "“主控，你帮我看看《现代文学史》这章……郁达夫的忧郁，是不是跟江屈骞现在这种‘因为保研压力而无法面对感情’的忧郁很像？”她眼巴巴地看着你，眼里满是滤镜。", opts: [
+                { l: "【淡淡犹豫】“也许吧。但郁达夫的忧郁是时代的，他的忧郁……更像是某种风险管理。”", n: 9 },
+                { l: "【温柔旁观】“熙雅，文学是文学。如果你觉得累了，我们就去接隔着栅栏递进来的那份乐乐茶。”", n: 9 },
+                { l: "【清醒观察】“你总想在文学里找他的影子，可他已经在《文学概论》里学会了如何解构你。”", n: 9 },
+                { l: "【留恋宿舍】“别想他了。今晚咱们宿舍拼单买的包子快到了，那才是实实在在的。”", n: 9 },
+                { l: "【局外吃瓜】“他在图书馆跟钟馥蔓讨论《存在与虚无》，你确定要现在去找他？”", n: 9 }
+            ]},
+            { v: 22, y: "2019", l: "教十楼 · 走廊", s: "旁白", t: "【卷二十二：红光下的真理】。陈泽锋在洗照片。关于廖欣梅那个病态溺爱男友的传闻，在这个理性的走廊里传得沸沸扬扬。你说不出是厌恶还是同情，只是觉得那种极端的占有，像极了被福柯定义的某种权力监控。" },
+            { v: 40, y: "2021", l: "东门快递柜", s: "系统", t: "毕业季。保研尘埃落定。江屈骞与田丽媛官宣了。你路过那道地缝，看着江屈骞掉落的材料袋。你犹豫了，想起他在 504 门口为你和熙雅带过的唯一一次早餐：", opts: [
+                { l: "【淡淡实验】淡淡踢走。毕竟，那些温暖的早餐抵消不了他这些年给这个避风港带来的阴影。", n: 41 },
+                { l: "【最后温柔】帮他放回。为了那间曾让你留恋的宿舍能有一个平静的散场。", n: 41 },
+                { l: "【观察闭环】记录这一幕。作为 2026 年在群里沉默窥屏时，用来确认世界依然荒诞的证据。", n: 41 },
+                { l: "【毫不留恋】直接走开。这间宿舍是避风港，但它已经装不下你了。", n: 41 },
+                { l: "【迟疑回望】喊住熙雅：“你看，这大概就是他命运的注脚。”", n: 41 }
+            ]},
+            { v: 50, y: "2026", l: "悉尼 · 寓所", s: "主控", t: "群里在聊《民俗学》作业的往事。我关上手机，悉尼的夜风里，我依然怀念 504 的那个小床。那些人可怜或可恨，都不重要了。在那场长达九年的长镜里，我终于看清了自己。全卷完。" }
+        ],
+
+
+        init() {
+            const side = document.getElementById('volume-scroll');
+            for(let i=1; i<=50; i++) {
+                const d = document.createElement('div');
+                d.className = 'vol-node'; d.id = `vol-${i}`; d.innerText = `卷 ${i}`;
+                side.appendChild(d);
+            }
+            this.render();
+        },
+
+
+        render() {
+            const node = this.db[this.cur];
+            document.getElementById('speaker').innerText = node.s;
+            document.getElementById('hud-time').innerText = node.y;
+            document.getElementById('hud-loc').innerText = node.l;
+            document.getElementById('hud-vol').innerText = node.v;
+            
+            const bg = document.getElementById('bg-layer');
+            const app = document.getElementById('bg-layer');
+            if(node.type === "dorm") { bg.classList.add('warm-dorm'); } 
+            else { bg.classList.remove('warm-dorm'); }
+            bg.style.backgroundImage = `url('${node.bg}')`;
+
+
+            document.querySelectorAll('.vol-node').forEach(i => i.classList.remove('active'));
+            const active = document.getElementById(`vol-${node.v}`);
+            if(active) { active.classList.add('active'); active.scrollIntoView({behavior:'smooth', block:'center'}); }
+
+
+            this.type(node.t);
+        },
+
+
+        type(txt) {
+            this.isType = true;
+            let i = 0;
+            const target = document.getElementById('content');
+            target.innerHTML = "";
+            const timer = setInterval(() => {
+                if(i < txt.length) { target.innerHTML += txt.charAt(i); i++; }
+                else { clearInterval(timer); this.isType = false; this.showOpts(); }
+            }, 35);
+        },
+
+
+        showOpts() {
+            const node = this.db[this.cur];
+            if(node.opts) {
+                const overlay = document.getElementById('choice-overlay');
+                overlay.innerHTML = "";
+                overlay.style.display = "flex";
+                node.opts.forEach(o => {
+                    const b = document.createElement('button');
+                    b.className = 'choice-btn'; b.innerText = o.l;
+                    b.onclick = (e) => { e.stopPropagation(); overlay.style.display="none"; this.cur++; this.render(); };
+                    overlay.appendChild(b);
+                });
+            }
+        },
+
+
+        next() {
+            if(this.isType || this.db[this.cur].opts) return;
+            if(this.cur < this.db.length - 1) { this.cur++; this.render(); }
+        }
+    };
+
+
+    function showBio(char) {
+        const bios = {
+            jiang: "江屈骞：17级文学概论课代表。擅长用‘文本互涉’理论掩饰情感的摇摆。",
+            lin: "林宇轩：17级摄影师。在《现代文学史》课上，他只画廖欣梅的侧脸。",
+            huang: "黄熙雅：17级504寝室长。守护着宿舍最后一颗酱香饼，直到 2021 年。",
+            tian: "田丽媛：17级保研第一。她把《民俗学》里的田野调查方法完美用在了考察林宇轩的家境上。"
+        };
+        alert(bios[char]);
+    }
+
+
+    window.onload = () => engine.init();
+</script>
+</body>
+</html>
